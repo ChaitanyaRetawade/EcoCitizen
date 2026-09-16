@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoCitizen — Citizen Engagement Platform for Environmental Issues & Sustainability</title>
+  <meta name="description" content="Next-generation civic platform for reporting local environmental hazards, tracking remediation, and mobilizing community sustainability initiatives.">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN with PRD Customized Palette -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            forest: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534', // PRD Primary Color
+              900: '#14532d',
+            },
+            alert: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              200: '#fed7aa',
+              500: '#f97316',
+              600: '#ea580c', // PRD Accent Color
+              700: '#c2410c',
+            },
+            earth: {
+              50: '#fafaf9',
+              100: '#f5f5f4', // PRD Secondary/Sand
+              200: '#e7e5e4',
+              700: '#44403c',
+              800: '#292524',
+              900: '#1c1917',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet GIS Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- EcoCitizen Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pb-16 md:pb-0">
+
+  <!-- =========================================================
+       Screen 1: Top Navigation Bar
+       ========================================================= -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="window.ecoApp.switchTab('feed-hub')">
+        <div class="w-10 h-10 rounded-xl bg-forest-800 flex items-center justify-center text-white shadow-md shadow-forest-800/20">
+          <i data-lucide="shield-alert" class="w-5 h-5 text-emerald-300"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xl font-extrabold tracking-tight text-forest-800">EcoCitizen</span>
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-forest-50 text-forest-700 border border-forest-200">Civic MVP</span>
+          </div>
+          <p class="hidden sm:block text-[11px] text-gray-500 font-medium leading-none">Environmental Sentinel Portal</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Desktop) -->
+      <nav class="hidden md:flex items-center gap-1 bg-gray-100/80 p-1 rounded-xl border border-gray-200">
+        <button class="nav-tab-btn active px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex items-center gap-1.5 text-forest-800 bg-white shadow-sm" data-tab="feed-hub">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+          <span>The Hub (Feed & Map)</span>
+        </button>
+        <button class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex items-center gap-1.5 text-gray-600 hover:text-gray-900" data-tab="initiatives">
+          <i data-lucide="users" class="w-3.5 h-3.5"></i>
+          <span>Initiatives</span>
+        </button>
+        <button class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 flex items-center gap-1.5 text-gray-600 hover:text-gray-900" data-tab="dashboard">
+          <i data-lucide="award" class="w-3.5 h-3.5"></i>
+          <span>My Dashboard</span>
+        </button>
+      </nav>
+
+      <!-- Search & Report CTA -->
+      <div class="flex items-center gap-3">
+        <!-- Search Input -->
+        <div class="relative hidden lg:block w-64">
+          <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input type="text" id="global-search-input" placeholder="Search issues, streets..." class="w-full pl-9 pr-3 py-1.5 bg-gray-100 hover:bg-gray-50 focus:bg-white border border-gray-200 focus:border-forest-600 rounded-lg text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-forest-600/10 transition-all">
+        </div>
+
+        <!-- User Profile Pill -->
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-forest-50 border border-forest-200 rounded-lg cursor-pointer hover:bg-forest-100/70 transition-all" onclick="window.ecoApp.switchTab('dashboard')">
+          <div class="w-6 h-6 rounded-full bg-forest-800 text-white text-[11px] font-bold flex items-center justify-center">CA</div>
+          <div class="flex flex-col text-left">
+            <span class="text-xs font-semibold text-gray-800 leading-tight">Chaitanya Anand</span>
+            <span class="text-[10px] font-bold text-forest-700 leading-none" id="nav-points-badge">485 EcoPoints</span>
+          </div>
+        </div>
+
+        <!-- Primary Report CTA Button -->
+        <button id="btn-open-report-modal" class="inline-flex items-center gap-2 bg-forest-800 hover:bg-forest-900 text-white font-semibold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Report Issue</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- =========================================================
+       MAIN VIEWS WRAPPER
+       ========================================================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+
+    <!-- =========================================================
+         SCREEN 1: The Hub (2-Column: Map on Left, Feed on Right)
+         ========================================================= -->
+    <section id="view-feed-hub" class="view-panel block">
+      
+      <!-- Filter Bar -->
+      <div class="flex items-center justify-between flex-wrap gap-3 mb-4 pb-3 border-b border-gray-200">
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+          <span class="text-xs font-medium text-gray-500 hidden sm:inline">Filters:</span>
+          <button class="filter-pill active px-3 py-1 rounded-full text-xs font-semibold bg-forest-800 text-white shadow-sm" data-category="All">
+            All Issues
+          </button>
+          <button class="filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200 hover:border-gray-300" data-category="Waste Management">
+            🗑️ Garbage / Waste
+          </button>
+          <button class="filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200 hover:border-gray-300" data-category="Water Contamination">
+            💧 Water Contamination
+          </button>
+          <button class="filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200 hover:border-gray-300" data-category="Air Pollution">
+            💨 Air Pollution
+          </button>
+          <button class="filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200 hover:border-gray-300" data-category="Potholes & Hazards">
+            ⚠️ Potholes & Hazards
+          </button>
+          <button class="filter-pill px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200 hover:border-gray-300" data-category="Deforestation">
+            🌲 Deforestation
+          </button>
+        </div>
+
+        <!-- Mobile search -->
+        <div class="lg:hidden w-full sm:w-auto relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input type="text" id="mobile-search-input" placeholder="Search issues..." class="w-full sm:w-48 pl-8 pr-3 py-1 bg-white border border-gray-200 rounded-lg text-xs text-gray-800">
+        </div>
+      </div>
+
+      <!-- 2-Column Desktop Grid Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left Column: Interactive Map View (Sticky on Desktop) -->
+        <div class="lg:col-span-6 xl:col-span-7 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm lg:sticky lg:top-20 h-[380px] sm:h-[480px] lg:h-[calc(100vh-160px)] flex flex-col relative">
+          
+          <!-- Map Header Info Bar -->
+          <div class="p-3 bg-white border-b border-gray-100 flex items-center justify-between text-xs text-gray-600 z-10">
+            <div class="flex items-center gap-2 font-medium">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Live Geographic Incident Map</span>
+            </div>
+            <!-- Pin Legend (PRD: Red=Urgent, Yellow=Pending, Green=Resolved) -->
+            <div class="flex items-center gap-3 text-[11px] font-semibold">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-alert-600"></span> Urgent</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Pending</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-forest-800"></span> Resolved</span>
+            </div>
+          </div>
+
+          <!-- Leaflet Map Container -->
+          <div id="leaflet-map" class="flex-1 w-full h-full relative z-0"></div>
+
+          <!-- Recenter Floating Control -->
+          <button onclick="window.ecoApp.recenterMap()" class="absolute bottom-4 right-4 z-20 bg-white/95 hover:bg-white text-gray-700 text-xs font-semibold px-3 py-2 rounded-lg shadow-md border border-gray-200 flex items-center gap-1.5 transition-all">
+            <i data-lucide="crosshair" class="w-3.5 h-3.5 text-forest-700"></i>
+            <span>Recenter Map</span>
+          </button>
+        </div>
+
+        <!-- Right Column: Scrollable Issue Feed -->
+        <div class="lg:col-span-6 xl:col-span-5 flex flex-col gap-4">
+          
+          <div class="flex items-center justify-between text-xs text-gray-500 font-medium px-1">
+            <span id="feed-count-badge">Showing 7 verified reports</span>
+            <span>Sorted by Recent Activity</span>
+          </div>
+
+          <!-- Skeleton Loader (PRD Winning Touch 1) -->
+          <div id="feed-skeleton-loader" class="hidden flex flex-col gap-4">
+            <div class="bg-white rounded-xl border border-gray-200 p-4 flex gap-4">
+              <div class="w-28 h-28 rounded-lg skeleton-box flex-shrink-0"></div>
+              <div class="flex-1 flex flex-col gap-2 justify-center">
+                <div class="w-20 h-4 skeleton-box"></div>
+                <div class="w-3/4 h-5 skeleton-box"></div>
+                <div class="w-1/2 h-4 skeleton-box"></div>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 p-4 flex gap-4">
+              <div class="w-28 h-28 rounded-lg skeleton-box flex-shrink-0"></div>
+              <div class="flex-1 flex flex-col gap-2 justify-center">
+                <div class="w-24 h-4 skeleton-box"></div>
+                <div class="w-5/6 h-5 skeleton-box"></div>
+                <div class="w-1/3 h-4 skeleton-box"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Vertically Scrollable List of IssueCard Components -->
+          <div id="feed-list-container" class="flex flex-col gap-3.5">
+            <!-- Populated dynamically by app.js -->
+          </div>
+
+          <!-- Empty State (PRD Winning Touch 3) -->
+          <div id="feed-empty-state" class="hidden bg-white rounded-2xl border border-gray-200 p-8 text-center flex flex-col items-center justify-center gap-3 shadow-sm">
+            <div class="w-16 h-16 rounded-full bg-forest-50 text-forest-700 flex items-center justify-center">
+              <i data-lucide="check-circle-2" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-base font-bold text-gray-800">No issues found in this area!</h3>
+            <p class="text-xs text-gray-500 max-w-xs leading-relaxed">
+              You're living in a clean zone! Either no hazards have been reported with this filter, or municipal teams have resolved them all.
+            </p>
+            <button onclick="window.ecoApp.resetFilters()" class="mt-2 text-xs font-semibold text-forest-700 hover:text-forest-800 underline">
+              Clear filters to view all issues
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- =========================================================
+         SCREEN 3: Sustainability Initiatives (Grid Layout)
+         ========================================================= -->
+    <section id="view-initiatives" class="view-panel hidden">
+      
+      <!-- Section Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-gray-900">Upcoming Local Initiatives</h1>
+          <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Mobilize with your community around tree planting, river sweeps, and zero-waste projects.</p>
+        </div>
+        <button id="btn-open-propose-modal" class="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-forest-800 border border-forest-700 font-semibold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-sm transition-all">
+          <i data-lucide="sparkles" class="w-4 h-4 text-forest-600"></i>
+          <span>Propose Initiative</span>
+        </button>
+      </div>
+
+      <!-- Initiatives Grid (1 col mobile, 2 col tablet, 3 col desktop) -->
+      <div id="initiatives-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Populated dynamically by app.js -->
+      </div>
+
+    </section>
+
+    <!-- =========================================================
+         SCREEN 4: User Dashboard (Gamification & Tracking)
+         ========================================================= -->
+    <section id="view-dashboard" class="view-panel hidden">
+      
+      <!-- Hero Stats Row (3 Cards) -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        
+        <!-- Card 1: Issues Reported -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Issues Reported</span>
+            <div class="text-3xl font-extrabold text-gray-900 mt-1" id="dash-reported-count">8</div>
+            <span class="text-[11px] font-medium text-emerald-600">100% verified submissions</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-orange-50 text-alert-600 flex items-center justify-center">
+            <i data-lucide="file-text" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Card 2: Issues Resolved -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Issues Resolved</span>
+            <div class="text-3xl font-extrabold text-forest-800 mt-1" id="dash-resolved-count">7</div>
+            <span class="text-[11px] font-medium text-forest-700">88% resolution efficiency</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-forest-50 text-forest-800 flex items-center justify-center">
+            <i data-lucide="check-circle" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Card 3: Eco Points Earned -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Eco Points Earned</span>
+            <div class="text-3xl font-extrabold text-emerald-700 mt-1" id="dash-points-count">485</div>
+            <span class="text-[11px] font-medium text-emerald-600">Top 3% civic contributor</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <i data-lucide="award" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Impact Badge Card (Level 3: Green Guardian) -->
+      <div class="bg-gradient-to-br from-forest-900 via-forest-800 to-emerald-900 rounded-2xl p-6 text-white mb-6 shadow-md relative overflow-hidden">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-3xl shadow-inner">
+              🛡️
+            </div>
+            <div>
+              <div class="inline-block px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-[11px] font-bold text-emerald-300 uppercase tracking-wider mb-1">
+                Gamification Tier
+              </div>
+              <h2 class="text-xl sm:text-2xl font-black tracking-tight" id="dash-rank-title">Level 3: Green Guardian</h2>
+              <p class="text-xs text-emerald-100/80">Recognized for proactive hazardous spill notifications and park conservation.</p>
+            </div>
+          </div>
+
+          <!-- Progress Bar to Next Level -->
+          <div class="w-full md:w-72 bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/15">
+            <div class="flex justify-between text-xs font-semibold mb-1">
+              <span>Next Rank: Level 4</span>
+              <span id="dash-level-progress-text">485 / 600 PTS</span>
+            </div>
+            <div class="w-full h-2 bg-black/30 rounded-full overflow-hidden">
+              <div id="dash-level-progress-fill" class="h-full bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full" style="width: 81%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Badges Showcase -->
+        <div class="relative z-10 mt-6 pt-5 border-t border-white/15 grid grid-cols-2 sm:grid-cols-5 gap-3" id="dash-badges-row">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- My Reports Tab / Table Section -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-gray-900">My Submitted Reports</h3>
+            <p class="text-xs text-gray-500">Track real-time municipal inspection and remediation progress</p>
+          </div>
+          <span class="text-xs font-semibold text-forest-700 bg-forest-50 px-2.5 py-1 rounded-md border border-forest-200">
+            Live Civic Tracking
+          </span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-gray-50 text-gray-500 font-semibold border-b border-gray-200">
+                <th class="p-3.5">Issue ID</th>
+                <th class="p-3.5">Title & Category</th>
+                <th class="p-3.5">Location</th>
+                <th class="p-3.5">Date Filed</th>
+                <th class="p-3.5">Upvotes</th>
+                <th class="p-3.5">Status</th>
+                <th class="p-3.5 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="dash-my-reports-tbody" class="divide-y divide-gray-100">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- =========================================================
+       SCREEN 2: Report an Issue Modal (Centered Dialog)
+       ========================================================= -->
+  <div id="report-modal" class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden transform scale-95 transition-transform duration-200" id="report-modal-card">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900">Report an Environmental Issue</h2>
+          <p class="text-xs text-gray-500">Provide details to mobilize local authority remediation</p>
+        </div>
+        <button id="btn-close-report-modal" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Form) -->
+      <form id="report-issue-form" class="flex-1 overflow-y-auto p-5 space-y-4">
+        
+        <!-- Drag-and-Drop Image Uploader -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1.5">Evidence Photo</label>
+          <div id="image-dropzone" class="border-2 border-dashed border-gray-300 hover:border-forest-600 bg-gray-50/50 hover:bg-forest-50/30 rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2">
+            <div id="dropzone-empty" class="flex flex-col items-center">
+              <div class="w-10 h-10 rounded-full bg-forest-50 text-forest-700 flex items-center justify-center mb-1">
+                <i data-lucide="camera" class="w-5 h-5"></i>
+              </div>
+              <span class="text-xs font-semibold text-gray-700">Drag & drop photo here, or browse</span>
+              <span class="text-[11px] text-gray-400">Supports JPG, PNG (Simulated upload)</span>
+            </div>
+            <div id="dropzone-preview" class="hidden w-full relative">
+              <img id="image-preview-element" src="" alt="Preview" class="w-full h-36 object-cover rounded-lg border border-gray-200">
+              <button type="button" id="btn-clear-image" class="absolute top-2 right-2 bg-gray-900/70 text-white rounded-full p-1 hover:bg-gray-900">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+            <input type="file" id="report-file-input" accept="image/*" class="hidden">
+          </div>
+        </div>
+
+        <!-- Issue Title -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Issue Title</label>
+          <input type="text" id="report-title-input" placeholder="e.g. Broken sewage pipe leaking into storm basin" required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-forest-600/10">
+        </div>
+
+        <!-- Category Dropdown -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Category</label>
+          <select id="report-category-select" required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-forest-600/10">
+            <option value="Waste Management">Waste Management (Illegal Dumping, Overflow)</option>
+            <option value="Water Contamination">Water Contamination (Chemicals, Runoff)</option>
+            <option value="Air Pollution">Air Pollution (Industrial Smog, Fumes)</option>
+            <option value="Potholes & Hazards">Potholes & Hazards (Sinkholes, Infrastructure)</option>
+            <option value="Deforestation">Deforestation (Unauthorized Logging, Tree Damage)</option>
+          </select>
+        </div>
+
+        <!-- Location Picker with Current Location Button -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs font-semibold text-gray-700">Location</label>
+            <button type="button" id="btn-use-curr-location" class="text-[11px] font-semibold text-forest-700 hover:text-forest-800 flex items-center gap-1">
+              <i data-lucide="locate" class="w-3 h-3"></i>
+              <span>Use Current Location</span>
+            </button>
+          </div>
+          <input type="text" id="report-location-input" placeholder="Enter landmark, street name, or coordinates..." required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-forest-600/10">
+        </div>
+
+        <!-- Description Area with Character Counter -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs font-semibold text-gray-700">Description</label>
+            <span class="text-[11px] text-gray-400 font-mono" id="char-counter">0 / 500</span>
+          </div>
+          <textarea id="report-desc-textarea" maxlength="500" rows="3" placeholder="Describe the severity, environmental impact, odor, or safety hazard..." required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:bg-white focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-forest-600/10 resize-none"></textarea>
+        </div>
+
+        <!-- Urgency Toggle (Low / Medium / High) -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1.5">Urgency Level</label>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="urgency-option cursor-pointer">
+              <input type="radio" name="urgency" value="Low" class="hidden peer">
+              <div class="p-2 border border-gray-200 peer-checked:border-forest-600 peer-checked:bg-forest-50 peer-checked:text-forest-800 rounded-xl text-center text-xs font-semibold transition-all">
+                Low
+              </div>
+            </label>
+            <label class="urgency-option cursor-pointer">
+              <input type="radio" name="urgency" value="Medium" checked class="hidden peer">
+              <div class="p-2 border border-gray-200 peer-checked:border-amber-500 peer-checked:bg-amber-50 peer-checked:text-amber-800 rounded-xl text-center text-xs font-semibold transition-all">
+                Medium
+              </div>
+            </label>
+            <label class="urgency-option cursor-pointer">
+              <input type="radio" name="urgency" value="High" class="hidden peer">
+              <div class="p-2 border border-gray-200 peer-checked:border-alert-600 peer-checked:bg-alert-50 peer-checked:text-alert-600 rounded-xl text-center text-xs font-semibold transition-all">
+                🚨 High / Urgent
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Modal Footer with Loading State Submit Button -->
+        <div class="pt-3 border-t border-gray-100 flex items-center justify-end gap-3">
+          <button type="button" id="btn-cancel-report" class="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-800 rounded-xl">
+            Cancel
+          </button>
+          
+          <button type="submit" id="btn-submit-report" class="relative inline-flex items-center justify-center gap-2 bg-forest-800 hover:bg-forest-900 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-sm hover:shadow transition-all min-w-[140px]">
+            <span id="btn-submit-text">Submit Report</span>
+            <!-- Spinner -->
+            <svg id="btn-submit-spinner" class="hidden animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+  <!-- =========================================================
+       PROPOSE INITIATIVE MODAL
+       ========================================================= -->
+  <div id="propose-modal" class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-md w-full p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+        <h3 class="text-base font-bold text-gray-900">Propose Community Initiative</h3>
+        <button onclick="window.ecoApp.closeProposeModal()" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="propose-form" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Campaign Title</label>
+          <input type="text" id="prop-title" placeholder="e.g. Presidio Native Butterfly Corridor" required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Category</label>
+          <select id="prop-cat" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900">
+            <option value="Urban Reforestation">Urban Reforestation</option>
+            <option value="Clean Water">Clean Water</option>
+            <option value="Clean Energy">Clean Energy</option>
+            <option value="Circular Economy">Circular Economy</option>
+            <option value="Biodiversity">Biodiversity</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Target Volunteers</label>
+            <input type="number" id="prop-target" placeholder="50" required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Date & Time</label>
+            <input type="text" id="prop-date" placeholder="Saturday, Nov 14 • 10 AM" required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Meeting Location</label>
+          <input type="text" id="prop-loc" placeholder="e.g. Marina Green West Pavilions" required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Brief Description</label>
+          <textarea id="prop-desc" rows="2" placeholder="Volunteer goals, gear needed, and community impact..." required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 resize-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="window.ecoApp.closeProposeModal()" class="px-3 py-1.5 text-xs text-gray-600 hover:text-gray-800">Cancel</button>
+          <button type="submit" class="bg-forest-800 hover:bg-forest-900 text-white font-semibold text-xs px-4 py-2 rounded-xl">Launch Initiative</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       ISSUE DETAIL & BEFORE/AFTER MODAL
+       ========================================================= -->
+  <div id="detail-modal" class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden" id="detail-modal-card">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-forest-700 px-2 py-0.5 rounded-full bg-forest-50 border border-forest-200" id="det-badge-cat">Category</span>
+          <h3 class="text-base font-bold text-gray-900 mt-1" id="det-title">Issue Title</h3>
+        </div>
+        <button onclick="window.ecoApp.closeDetailModal()" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4">
+        <!-- Image / Before & After Slider -->
+        <div id="det-media-container" class="rounded-xl overflow-hidden border border-gray-200">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Description -->
+        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+          <div class="text-xs font-semibold text-gray-700 mb-1">Citizen Report Details:</div>
+          <p class="text-xs text-gray-600 leading-relaxed" id="det-desc"></p>
+        </div>
+
+        <!-- Meta -->
+        <div class="grid grid-cols-2 gap-3 text-xs text-gray-500 pt-1">
+          <div>📍 <strong class="text-gray-800" id="det-location">Location</strong></div>
+          <div>🕒 Filed <strong class="text-gray-800" id="det-time">Timestamp</strong></div>
+          <div>👤 Reported by <strong class="text-gray-800" id="det-reporter">User</strong></div>
+          <div>📊 Current Status: <span id="det-status-pill">In Progress</span></div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+        <button id="det-upvote-btn" class="inline-flex items-center gap-1.5 text-xs font-semibold text-forest-800 hover:bg-forest-50 px-3 py-1.5 rounded-lg border border-forest-200 transition-colors">
+          <i data-lucide="thumbs-up" class="w-3.5 h-3.5"></i>
+          <span id="det-upvote-count">Upvote (42)</span>
+        </button>
+
+        <button onclick="window.ecoApp.focusIssueOnMapFromModal()" class="bg-forest-800 hover:bg-forest-900 text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+          <span>View on Map</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       PRD WINNING TOUCH 4: Mobile-First Sticky Bottom Navigation
+       ========================================================= -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 flex items-center justify-around py-2 px-3 shadow-lg">
+    <button class="mobile-nav-btn active flex flex-col items-center text-forest-800" data-tab="feed-hub">
+      <i data-lucide="home" class="w-5 h-5"></i>
+      <span class="text-[10px] font-medium mt-0.5">The Hub</span>
+    </button>
+    <button class="mobile-nav-btn flex flex-col items-center text-gray-400 hover:text-gray-600" data-tab="initiatives">
+      <i data-lucide="users" class="w-5 h-5"></i>
+      <span class="text-[10px] font-medium mt-0.5">Initiatives</span>
+    </button>
+    
+    <!-- Elevated Report Button -->
+    <button id="btn-mobile-report" class="w-12 h-12 -mt-5 rounded-full bg-forest-800 text-white shadow-lg shadow-forest-800/30 flex items-center justify-center border-4 border-white transition-transform active:scale-95">
+      <i data-lucide="plus" class="w-6 h-6"></i>
+    </button>
+
+    <button class="mobile-nav-btn flex flex-col items-center text-gray-400 hover:text-gray-600" data-tab="dashboard">
+      <i data-lucide="user" class="w-5 h-5"></i>
+      <span class="text-[10px] font-medium mt-0.5">Dashboard</span>
+    </button>
+  </nav>
+
+  <!-- =========================================================
+       PRD WINNING TOUCH 2: Toast Notifications Stack Container
+       ========================================================= -->
+  <div id="toast-container" class="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"></div>
+
+  <!-- External Script Dependencies -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <!-- Application Logic -->
+  <script type="module" src="js/app.js"></script>
+
+</body>
+</html>
